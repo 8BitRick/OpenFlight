@@ -54,7 +54,17 @@ class OpenFlightFileTests < Test::Unit::TestCase
     faces = @file.get_faces
     assert_not_empty faces
     assert_equal 22, faces.size
-    assert_equal 3, faces[0].size
-    assert_in_epsilon 0.30038570000682946, faces[0][0][0], 0.001, "Face 1st vertex X position is incorrect!"
+    assert_equal 3, faces[0][:v].size
+    assert_equal 'p8480_2', faces[0][:name]
+    assert_in_epsilon 0.30038570000682946, faces[0][:v][0][0], 0.001, "Face 1st vertex X position is incorrect!"
+  end
+
+  def test_get_normals
+    faces = @file.get_faces
+    assert_not_empty faces
+    assert_in_epsilon 1.9717038477736717e-16, faces[0][:n][0], 0.001, "Face normal X is incorrect!"
+    assert_in_epsilon 1.0, faces[0][:n][1], 0.001, "Face normal Y is incorrect!"
+    assert_in_epsilon 9.021970987110908e-24, faces[0][:n][2], 0.001, "Face normal Z is incorrect!"
+    assert_in_epsilon 90.0, faces[0][:angle], 0.001, "Face angle is incorrect!"
   end
 end

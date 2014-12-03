@@ -5,6 +5,14 @@
 # Refer to OpenFlight Specification PDF for explanation of OpenFlight file layout
 # http://www.presagis.com/products_services/standards/openflight/more/openflight_specifications/
 
+require 'matrix'
+
+# Add simpler vector method names to Vector class
+class Vector
+  def dot(v) self.inner_product(v) end
+  def cross(v) self.cross_product(v) end
+end
+
 class OpenFlightFile
 
   def open_file file_name
@@ -19,6 +27,8 @@ class OpenFlightFile
     byte_buffer = bytes[@length_of_header .. -1]
     @records_packed = [byte_buffer.join].pack('H*')
   end
+
+  def packed_record_data; @records_packed end
 
   # Base method to pull data from records
   def get_records_with_filter (&block)
@@ -114,6 +124,16 @@ class OpenFlightFile
     end
   end
 
+  def get_face_names
+    records = get_records_of_type 5
+    face_names = records.map do |v|
+      thing = v
+      c1 = thing.unpack 'C*'
+      name_bytes = c1[4...12]
+      name = name_bytes.pack('C*').unpack('A*')[0]
+    end
+  end
+
   def get_vertex_list
     @vertex_list ||= read_vertices_from_buffer
   end
@@ -123,9 +143,18 @@ class OpenFlightFile
 
     vertex_list = get_vertex_list
     face_vertex_indicies = get_all_face_vertex_indices
+    face_names = get_face_names
     # Fetch the vertex positions and put into faces
-    @faces ||= face_vertex_indicies.map do |f|
-      f.map {|v| vertex_list[v]}
+    @faces ||= face_vertex_indicies.map.with_index do |f,i|
+      # Convert to math vectors to perform math operations
+      vecs = f.map {|v| Vector.elements(vertex_list[v])}
+      local_vecs = [(vecs[0] - vecs[1]).normalize, (vecs[2] - vecs[1]).normalize]
+      normal = local_vecs[0].cross_product(local_vecs[1]).normalize
+      cos_angle = normal.inner_product(Vector[0,0,1])
+      angle = Math.acos(cos_angle) * (180 / Math::PI)
+      face_name = face_names[i]
+      # Now construct the new face object hash
+      {v: vecs, n: normal, angle: angle, name: face_name}
     end
   end
 
