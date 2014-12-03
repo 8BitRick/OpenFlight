@@ -100,6 +100,7 @@ class OpenFlightFile
     offset = 0
     ptr = ui2
     record_byte_offset = 0
+    record_type_array = Array(requested_record_type)
 
     while(offset < ui2_size) do
       curr_record_type = ptr[offset]
@@ -109,7 +110,7 @@ class OpenFlightFile
 
       #yield records, curr_record_type, offset, ptr
       #do |records, record_type, offset, ptr|
-          if curr_record_type == requested_record_type
+          if record_type_array.include? curr_record_type
             #records.push(ptr[record_byte_offset...record_byte_offset+record_size].pack('S>*'))
             records.push(@records_packed[record_byte_offset...record_byte_offset+record_size])
           end
@@ -143,7 +144,7 @@ class OpenFlightFile
   end
 
   def read_vertices_from_buffer
-    records = get_records_of_type 70
+    records = get_records_of_type [68, 69, 70, 71]
     vertex_list = records.map do |v|
       thing = v
       d8 = thing.unpack 'G*' # d8 contains 'double 8 byte'
@@ -224,10 +225,24 @@ class OpenFlightFile
     @faces ||= face_vertex_indicies.map.with_index do |f,i|
       # Convert to math vectors to perform math operations
       vecs = f.map {|v| Vector.elements(vertex_list[v])}
-      local_vecs = [(vecs[0] - vecs[1]).normalize, (vecs[2] - vecs[1]).normalize]
-      normal = local_vecs[0].cross_product(local_vecs[1]).normalize
-      cos_angle = normal.inner_product(Vector[0,0,1])
-      angle = Math.acos(cos_angle) * (180 / Math::PI)
+
+      if vecs.size == 3
+        v1 = (vecs[0] - vecs[1])
+        v2 = (vecs[2] - vecs[1])
+        if v1.norm > 0.001 && v2.norm > 0.001
+          local_vecs = [v1.normalize, v2.normalize]
+          normal = local_vecs[0].cross_product(local_vecs[1]).normalize
+          cos_angle = normal.inner_product(Vector[0,0,1])
+          angle = Math.acos(cos_angle) * (180 / Math::PI)
+        else
+          normal = 'collocated vertices'
+          angle = nil
+        end
+      else
+        normal = 'verts = ' + vecs.size.to_s
+        angle = nil
+      end
+
       face_name = face_names[i]
       # Now construct the new face object hash
       {v: vecs, n: normal, angle: angle, name: face_name}
