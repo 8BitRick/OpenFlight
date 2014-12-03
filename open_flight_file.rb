@@ -18,21 +18,18 @@ class OpenFlightFile
   def open_file file_name
     # TODO - add some file error checking
     @file_packed = File.binread file_name
-    ui2 = @file_packed.unpack 'S>*' # ui2 contains 'unsigned int 2 byte'
+    ui2 = @file_packed.unpack 'S>8' # ui2 contains 'unsigned int 2 byte'
     @length_of_header = ui2[1]
     @file_version = ui2[7]
-
-    h = @file_packed.unpack('H*')
-    bytes = h[0].scan(/.{2}/)
-    byte_buffer = bytes[@length_of_header .. -1]
-    @records_packed = [byte_buffer.join].pack('H*')
+    @records_packed = @file_packed[@length_of_header .. -1]
+    @records_unpacked = @records_packed.unpack 'S>*'
   end
 
   def packed_record_data; @records_packed end
 
   # Base method to pull data from records
   def get_records_with_filter (&block)
-    ui2 = @records_packed.unpack 'S>*' # ui2 contains 'unsigned int 2 byte'
+    ui2 = @records_unpacked
     records = []
 
     ui2_size = ui2.size
@@ -53,7 +50,7 @@ class OpenFlightFile
   end
 
   def get_first_record_with_filter (&block)
-    ui2 = @records_packed.unpack 'S>*' # ui2 contains 'unsigned int 2 byte'
+    ui2 = @records_unpacked
     record = nil
 
     ui2_size = ui2.size
@@ -87,12 +84,42 @@ class OpenFlightFile
     Hash[Hash[get_record_types.group_by {|x| x}.map {|k,v| [k,v.count]}].sort] # counts of each record type
   end
 
+  # def get_records_of_type requested_record_type
+  #   get_records_with_filter do |records, record_type, offset, ptr|
+  #     if record_type == requested_record_type
+  #       records.push(ptr[0..offset].pack('S>*'))
+  #     end
+  #   end
+  # end
+
   def get_records_of_type requested_record_type
-    get_records_with_filter do |records, record_type, offset, ptr|
-      if record_type == requested_record_type
-        records.push(ptr[0..offset].pack('S>*'))
-      end
+    ui2 = @records_unpacked
+    records = []
+
+    ui2_size = ui2.size
+    offset = 0
+    ptr = ui2
+    record_byte_offset = 0
+
+    while(offset < ui2_size) do
+      curr_record_type = ptr[offset]
+      record_size = ptr[offset+1]
+
+      offset += (record_size/2)
+
+      #yield records, curr_record_type, offset, ptr
+      #do |records, record_type, offset, ptr|
+          if curr_record_type == requested_record_type
+            #records.push(ptr[record_byte_offset...record_byte_offset+record_size].pack('S>*'))
+            records.push(@records_packed[record_byte_offset...record_byte_offset+record_size])
+          end
+      #end
+
+      record_byte_offset += record_size
+      #ptr = ptr[(record_size/2)..-1]
     end
+
+    records
   end
 
   def get_first_record_of_type requested_record_type
@@ -130,7 +157,7 @@ class OpenFlightFile
     # For this reason we must keep track of when we are directly following a face record
     # Then we know to replace the old face name with the new one from our "Long ID record"
 
-    ui2 = @records_packed.unpack 'S>*' # ui2 contains 'unsigned int 2 byte'
+    ui2 = @records_unpacked
     records = []
 
     ui2_size = ui2.size
