@@ -49,4 +49,12 @@ class OpenFlightFileTests < Test::Unit::TestCase
     assert_in_epsilon -0.05670486439317339, vertex_list[1][1], 0.001, "Vertex Y position is incorrect!"
     assert_in_epsilon 2.128891083916551, vertex_list[1][2], 0.001, "Vertex Z position is incorrect!"
   end
+
+  def test_get_faces
+    faces = @file.get_faces
+    assert_not_empty faces
+    assert_equal 22, faces.size
+    assert_equal 3, faces[0].size
+    assert_in_epsilon 0.30038570000682946, faces[0][0][0], 0.001, "Face 1st vertex X position is incorrect!"
+  end
 end

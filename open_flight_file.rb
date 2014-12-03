@@ -1,6 +1,10 @@
 # This class is still very much in development
 # Right now it will basically open an open flight file and let you grab binary chunks for records
 # This is also VERY not optimized yet
+
+# Refer to OpenFlight Specification PDF for explanation of OpenFlight file layout
+# http://www.presagis.com/products_services/standards/openflight/more/openflight_specifications/
+
 class OpenFlightFile
 
   def open_file file_name
@@ -86,15 +90,18 @@ class OpenFlightFile
   end
 
   def get_all_face_vertex_indices
-    face_records = get_records_of_type 72
+    return @face_vertex_indices unless @face_vertex_indices.nil?
 
-    @faces = face_records.map do |f|
+    face_records = get_records_of_type 72
+    vertex_offsets = get_vertex_offsets
+
+    @face_vertex_indices ||= face_records.map do |f|
       thing = f
       ui4 = thing.unpack 'L>*' # ui4 contains 'unsigned int 4 byte'
       ui2 = thing.unpack 'S>*' # ui2 contains 'unsigned int 2 byte'
 
       num_verts = (ui2[1] - 4) / 4
-      verts = (0...num_verts).map{|v| ui4[1+v]}
+      verts = (0...num_verts).map{|v| vertex_offsets.index(ui4[1+v])}
     end
   end
 
@@ -102,8 +109,6 @@ class OpenFlightFile
     records = get_records_of_type 70
     vertex_list = records.map do |v|
       thing = v
-      ui4 = thing.unpack 'L>*' # ui4 contains 'unsigned int 4 byte'
-      ui2 = thing.unpack 'S>*' # ui2 contains 'unsigned int 2 byte'
       d8 = thing.unpack 'G*' # d8 contains 'double 8 byte'
       d8[1..3]
     end
@@ -111,5 +116,39 @@ class OpenFlightFile
 
   def get_vertex_list
     @vertex_list ||= read_vertices_from_buffer
+  end
+
+  def get_faces
+    return @faces unless @faces.nil?
+
+    vertex_list = get_vertex_list
+    face_vertex_indicies = get_all_face_vertex_indices
+    # Fetch the vertex positions and put into faces
+    @faces ||= face_vertex_indicies.map do |f|
+      f.map {|v| vertex_list[v]}
+    end
+  end
+
+  # This is necessary because faces have vertex offset positions instead of indices
+  # This vertex offset list will help align faces with their vertices
+  def build_vertex_offset_list
+    vertex_offsets =
+        get_records_with_filter do |records, record_type, offset, ptr|
+          new_vertex_offset = case record_type
+                                when 68 then 40 # Color
+                                when 69 then 56 # Color, Normal
+                                when 70 then 64 # Color, Normal, UV
+                                when 71 then 48 # Color, UV
+                                else nil
+                              end
+          records.push(new_vertex_offset) unless new_vertex_offset.nil?
+        end
+    vertex_offsets.insert(0, 8)
+    cumulative = 0
+    vertex_offsets.map{|vo| cumulative += vo}
+  end
+
+  def get_vertex_offsets
+    @vertex_offsets ||= build_vertex_offset_list
   end
 end

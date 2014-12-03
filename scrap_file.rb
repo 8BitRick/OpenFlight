@@ -105,3 +105,19 @@ ui2 = thing.unpack 'S>*' # ui2 contains 'unsigned int 2 byte'
 d8 = thing.unpack 'G*' # d8 contains 'double 8 byte'
 h = thing.unpack 'H*'
 h4 = h[0].scan(/.{8}/) # h4 contains 4 byte chunks
+
+# Build vertex offset list
+vertex_offsets =
+get_records_with_filter (bytes_packed) do |records, record_type, offset, ptr|
+  new_vertex_offset = case record_type
+                        when 68 then 40 # Color
+                        when 69 then 56 # Color, Normal
+                        when 70 then 64 # Color, Normal, UV
+                        when 71 then 48 # Color, UV
+                        else nil
+                      end
+  records.push(new_vertex_offset) unless new_vertex_offset.nil?
+end
+vertex_offsets.insert(0, 8)
+cumulative = 0
+vertex_offsets.map{|vo| cumulative += vo}

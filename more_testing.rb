@@ -11,10 +11,14 @@ class TestOF
     @record_types = @file.get_record_types
     @record_hash = @file.get_record_types_count
     @records = @file.get_records_of_type 2
-    @faces = @file.get_all_face_vertex_indices
+    @face_vertex_indices = @file.get_all_face_vertex_indices
+    @faces = @file.get_faces
+    @vertex_list = @file.get_vertex_list
   end
 
   def record_types; @record_types end
+  def face_vertex_indices; @face_vertex_indices end
   def faces; @faces end
+  def vertex_list; @vertex_list end
   def record_hash; @record_hash end
 end
