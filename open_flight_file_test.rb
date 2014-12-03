@@ -56,6 +56,8 @@ class OpenFlightFileTests < Test::Unit::TestCase
     assert_equal 22, faces.size
     assert_equal 3, faces[0][:v].size
     assert_equal 'p8480_2', faces[0][:name]
+    assert_equal 'p8480_2{C572F6FD-C280-4EE5-86A3-7D2FE92507EE}', faces[1][:name],
+                 "Long name for face is incorrect! Check if long name is being fetch for the face"
     assert_in_epsilon 0.30038570000682946, faces[0][:v][0][0], 0.001, "Face 1st vertex X position is incorrect!"
   end
 

@@ -125,6 +125,55 @@ class OpenFlightFile
   end
 
   def get_face_names
+    # This is not pretty but is necessary to find the real names of polygons
+    # Each face record (type 5) may optionally be followed by a "Long ID record" (type 33)
+    # For this reason we must keep track of when we are directly following a face record
+    # Then we know to replace the old face name with the new one from our "Long ID record"
+
+    ui2 = @records_packed.unpack 'S>*' # ui2 contains 'unsigned int 2 byte'
+    records = []
+
+    ui2_size = ui2.size
+    offset = 0
+    ptr = ui2
+    name = ''
+    following_face_record = false
+
+    while(offset < ui2_size) do
+      curr_record_type = ptr[0]
+      record_size = ptr[1]
+      offset += (record_size/2)
+
+      if following_face_record && curr_record_type == 33
+        # This is the long name for the face
+        old_name = records.pop
+        raw_data = ptr[0..(record_size/2)].pack('S>*')
+        thing = raw_data
+        c1 = thing.unpack 'C*'
+        name_bytes = c1[4...record_size]
+        name = name_bytes.pack('C*').unpack('A*')[0]
+        records.push(name)
+      end
+
+      if curr_record_type == 5
+        raw_data = ptr[0..(record_size/2)].pack('S>*')
+        thing = raw_data
+        c1 = thing.unpack 'C*'
+        name_bytes = c1[4...12]
+        name = name_bytes.pack('C*').unpack('A*')[0]
+        records.push(name)
+        following_face_record = true
+      else
+        following_face_record = false
+      end
+
+      ptr = ptr[(record_size/2)..-1]
+    end
+
+    records
+  end
+
+  def get_face_short_names
     records = get_records_of_type 5
     face_names = records.map do |v|
       thing = v
