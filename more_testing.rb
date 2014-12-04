@@ -30,6 +30,10 @@ t=nil
 faces=nil
 t=TestOF.new
 faces = t.faces
+triangles = t.triangles
+quads = t.quads
+op = t.other_polygons
+bp = t.bad_polygons
 #puts Benchmark.measure{t=TestOF.new}
 #puts Benchmark.measure{faces = t.faces}
 
