@@ -25,6 +25,11 @@ class OpenFlightFile
     @records_unpacked = @records_packed.unpack 'S>*'
   end
 
+  def triangles; @triangles ||= @faces.select{|f| f[:v].size == 3} end
+  def quads; @quads ||= @faces.select{|f| f[:v].size == 4} end
+  def other_polygons; @other_polygons ||= @faces.select{|f| !triangles.include?(f) && !quads.include?(f)} end
+  def bad_polygons; @bad_polygons ||= @faces.select{|f| f[:n].is_a? String} end
+
   def packed_record_data; @records_packed end
 
   # Base method to pull data from records
@@ -226,24 +231,68 @@ class OpenFlightFile
       # Convert to math vectors to perform math operations
       vecs = f.map {|v| Vector.elements(vertex_list[v])}
 
+      vlist=[]
+
       if vecs.size == 3
-        v1 = (vecs[0] - vecs[1])
-        v2 = (vecs[2] - vecs[1])
-        if v1.norm > 0.001 && v2.norm > 0.001
-          local_vecs = [v1.normalize, v2.normalize]
+        vlist.push(vecs[0] - vecs[1])
+        vlist.push(vecs[1] - vecs[2])
+      elsif vecs.size >= 4
+        vlist.push(vecs[0] - vecs[1])
+        vlist.push(vecs[1] - vecs[2])
+        vlist.push(vecs[2] - vecs[3])
+      end
+
+      vert_pairs=vlist.each_cons(2).to_a
+      results = vert_pairs.map do |vp|
+        if vp.all?{|v| v.norm > 0.001}
+          local_vecs = [vp[0].normalize, vp[1].normalize]
           normal = local_vecs[0].cross_product(local_vecs[1]).normalize
           cos_angle = normal.inner_product(Vector[0,0,1])
+          cos_angle = [-1,cos_angle,1].sort[1] # limit to range (-1..1)
           angle = Math.acos(cos_angle) * (180 / Math::PI)
         else
           normal = 'collocated vertices'
           angle = nil
         end
-      else
-        normal = 'verts = ' + vecs.size.to_s
-        angle = nil
+        {n: normal, a: angle}
       end
 
       face_name = face_names[i]
+
+      case results.size
+        when 1
+          # Great this is a triangle
+          normal = results[0][:n]
+          angle = results[0][:a]
+        when 2
+          # This is a quad
+          # Compare normals on the quad (ensure they are close to pointing same direction)
+          if results.any?{|r| r[:n].is_a? String}
+            normal = 'collocated vertices'
+            angle = nil
+          else
+            cos_angle = results[0][:n].inner_product(results[1][:n])
+            cos_angle = [-1,cos_angle,1].sort[1] # limit to range (-1..1)
+            angle = Math.acos(cos_angle) * (180 / Math::PI)
+            if angle < 0.01
+              normal = results[0][:n]
+              angle = results[0][:a]
+            else
+              normal = 'Non-planar quad'
+              angle = nil
+            end
+          end
+        when results.size > 2
+          # Some other dimension polygon
+          # Skip our normal checks for now
+          normal = results[0][:n]
+          angle = results[0][:a]
+        else
+          # Mutated non-polygon
+          normal = 'Non-polygon, num vertices = ' + vecs.size
+          angle = nil
+      end
+
       # Now construct the new face object hash
       {v: vecs, n: normal, angle: angle, name: face_name}
     end

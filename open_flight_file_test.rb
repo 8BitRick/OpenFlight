@@ -64,9 +64,9 @@ class OpenFlightFileTests < Test::Unit::TestCase
   def test_get_normals
     faces = @file.get_faces
     assert_not_empty faces
-    assert_in_epsilon 1.9717038477736717e-16, faces[0][:n][0], 0.001, "Face normal X is incorrect!"
-    assert_in_epsilon 1.0, faces[0][:n][1], 0.001, "Face normal Y is incorrect!"
-    assert_in_epsilon 9.021970987110908e-24, faces[0][:n][2], 0.001, "Face normal Z is incorrect!"
+    assert_in_epsilon -1.9717038477736717e-16, faces[0][:n][0], 0.001, "Face normal X is incorrect!"
+    assert_in_epsilon -1.0, faces[0][:n][1], 0.001, "Face normal Y is incorrect!"
+    assert_in_epsilon -9.021970987110908e-24, faces[0][:n][2], 0.001, "Face normal Z is incorrect!"
     assert_in_epsilon 90.0, faces[0][:angle], 0.001, "Face angle is incorrect!"
   end
 end
