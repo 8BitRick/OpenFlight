@@ -8,7 +8,7 @@ class OpenFlightFileTests < Test::Unit::TestCase
   # to set up fixture information.
   def setup
     @file = OpenFlightFile.new
-    @file.open_file 'test.flt'
+    @file.open_file 'internal/test.flt'
   end
 
   # Called after every test method runs. Can be used to tear

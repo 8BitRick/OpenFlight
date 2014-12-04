@@ -1,6 +1,5 @@
-# This class is still very much in development
-# Right now it will basically open an open flight file and let you grab binary chunks for records
-# This is also VERY not optimized yet
+# This class does all of the internal processing to read the OpenFlight files
+# This was built and test with OpenFlight versions 16.2 and 16.4
 
 # Refer to OpenFlight Specification PDF for explanation of OpenFlight file layout
 # http://www.presagis.com/products_services/standards/openflight/more/openflight_specifications/
