@@ -8,6 +8,9 @@ This script was created primarily to do analysis on OpenFlight model polygons.
 Built and tested with ruby 2.1.2.
 There is only one function 'Vector.cross_product' that I know was introduced after ruby 1.9.3
 
+Refer to OpenFlight Specification PDF for explanation of OpenFlight file layout
+http://www.presagis.com/products_services/standards/openflight/more/openflight_specifications/
+
 # Usage
 
 ```
@@ -20,10 +23,7 @@ op = my_file.other_polygons   # returns a hash array of all non-triangles and no
 bp = my_file.bad_polygons    # returns a hash array of non-planar quads and polygons with collocated vertices
 ```
 
-The polygon hash is in the form of:
-
- angle is relative to positive Z
- name is the long ID of the polygon
+Each polygon hash is in the form of:
 
 ```
 [{:v=>
@@ -34,6 +34,9 @@ The polygon hash is in the form of:
     :angle=>Float,
 :name=>"name_string"}]
 ```
+
+* angle is relative to positive Z
+* name is the long ID of the polygon
 
 # FAQ
 
